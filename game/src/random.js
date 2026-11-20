@@ -1,5 +1,5 @@
 // Seeded RNG (mulberry32) — the ONLY source of randomness in gameplay, traffic,
-// pedestrians, spawns and shot staging. No Math.random() anywhere in the game.
+// pedestrians, spawns and shot staging. No unseeded randomness anywhere in the game.
 
 export class RNG {
   constructor(seed) {
