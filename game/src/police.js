@@ -44,9 +44,7 @@ export class Police {
   }
 
   spawnFoot(px, pz) {
-    const mesh = makePersonMesh(this.rng);
-    // police blue shirt
-    mesh.children[0].material = new THREE.MeshLambertMaterial({ color: 0x1f3a6b });
+    const mesh = makePersonMesh(this.rng, 0x1f3a6b); // police blue shirt
     mesh.position.set(px + this.rng.range(-15, 15), 0, pz + this.rng.range(-15, 15));
     this.scene.add(mesh);
     const f = { mesh, x: mesh.position.x, z: mesh.position.z, speed: 5.2, walkPhase: 0 };

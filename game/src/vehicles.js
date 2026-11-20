@@ -1,67 +1,53 @@
-// Cars: box-built meshes by type, plus arcade driving physics for the player
-// car and simple follow-the-leader motion for police cars. Damage shows as
-// smoke puffs (small sprite-less meshes) once health drops.
+// Cars: ONE merged mesh per car (vertex colours), so a car costs a single draw
+// call. Arcade driving physics for the player car and pursuit steering for
+// police cars. Damage shows as smoke once health drops.
 
 import { CAR_TYPES } from './config.js';
+import { mergeParts, xform, vertexMaterial } from './merge.js';
+
+const CAR_MAT = vertexMaterial();
 
 export function makeCarMesh(typeKey, colorOverride) {
   const t = CAR_TYPES[typeKey] || CAR_TYPES.sedan;
   const color = colorOverride !== undefined ? colorOverride : t.color;
-  const g = new THREE.Group();
-  const bodyMat = new THREE.MeshLambertMaterial({ color });
-  const darkMat = new THREE.MeshLambertMaterial({ color: 0x1a1d22 });
   const L = t.length, W = t.width;
-  const body = new THREE.Mesh(new THREE.BoxGeometry(W, 0.85, L), bodyMat);
-  body.position.y = 0.75; g.add(body);
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(W * 0.82, 0.7, L * 0.5), darkMat);
-  cabin.position.set(0, 1.5, -L * 0.05); g.add(cabin);
-  // windshield + rear window tint strips
-  const glass = new THREE.Mesh(new THREE.BoxGeometry(W * 0.84, 0.5, 0.12),
-    new THREE.MeshLambertMaterial({ color: 0x9fc4d8 }));
-  glass.position.set(0, 1.45, L * 0.22); g.add(glass);
-  // wheels
-  const wheelGeo = new THREE.CylinderGeometry(0.42, 0.42, 0.3, 10);
-  const wheelMat = new THREE.MeshLambertMaterial({ color: 0x14161a });
-  const wheels = [];
+  const parts = [];
+  const box = (w, h, d, x, y, z, c, ry) => parts.push({
+    geo: new THREE.BoxGeometry(w, h, d),
+    matrix: xform(x, y, z, 0, ry || 0, 0), color: c,
+  });
+  const cyl = (r1, r2, h, x, y, z, c, rx, rz) => parts.push({
+    geo: new THREE.CylinderGeometry(r1, r2, h, 10),
+    matrix: xform(x, y, z, rx || 0, 0, rz || 0), color: c,
+  });
+  // body + cabin + glass + lights
+  box(W, 0.85, L, 0, 0.75, 0, color);
+  box(W * 0.82, 0.7, L * 0.5, 0, 1.5, -L * 0.05, 0x1a1d22);
+  box(W * 0.84, 0.5, 0.12, 0, 1.45, L * 0.22, 0x9fc4d8);
+  box(0.4, 0.18, 0.1, -W / 2 + 0.35, 0.8, L / 2 + 0.02, 0xfff6c8);
+  box(0.4, 0.18, 0.1, W / 2 - 0.35, 0.8, L / 2 + 0.02, 0xfff6c8);
+  box(0.4, 0.18, 0.1, -W / 2 + 0.35, 0.8, -L / 2 - 0.02, 0xd92323);
+  box(0.4, 0.18, 0.1, W / 2 - 0.35, 0.8, -L / 2 - 0.02, 0xd92323);
+  // wheels (static geometry; the car still reads as moving from speed + dust)
   for (const [x, z] of [[-W / 2, L / 2 - 0.9], [W / 2, L / 2 - 0.9], [-W / 2, -L / 2 + 0.9], [W / 2, -L / 2 + 0.9]]) {
-    const w = new THREE.Mesh(wheelGeo, wheelMat);
-    w.rotation.z = Math.PI / 2;
-    w.position.set(x, 0.42, z);
-    g.add(w); wheels.push(w);
+    cyl(0.42, 0.42, 0.3, x, 0.42, z, 0x14161a, 0, Math.PI / 2);
   }
-  // headlights + taillights
-  const hl = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.18, 0.1),
-    new THREE.MeshBasicMaterial({ color: 0xfff6c8 }));
-  hl.position.set(-W / 2 + 0.35, 0.8, L / 2 + 0.02); g.add(hl);
-  const hl2 = hl.clone(); hl2.position.x = W / 2 - 0.35; g.add(hl2);
-  const tl = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.18, 0.1),
-    new THREE.MeshBasicMaterial({ color: 0xd92323 }));
-  tl.position.set(-W / 2 + 0.35, 0.8, -L / 2 - 0.02); g.add(tl);
-  const tl2 = tl.clone(); tl2.position.x = W / 2 - 0.35; g.add(tl2);
   if (typeKey === 'pickup') {
-    // open bed: lower rear + side rails
-    const bed = new THREE.Mesh(new THREE.BoxGeometry(W * 0.9, 0.5, L * 0.34),
-      new THREE.MeshLambertMaterial({ color: 0x2a2118 }));
-    bed.position.set(0, 1.0, -L * 0.3); g.add(bed);
+    box(W * 0.9, 0.5, L * 0.34, 0, 1.0, -L * 0.3, 0x2a2118);
   }
   if (typeKey === 'police') {
-    const bar = new THREE.Mesh(new THREE.BoxGeometry(W * 0.5, 0.22, 0.5),
-      new THREE.MeshBasicMaterial({ color: 0x2244ff }));
-    bar.position.set(0, 1.95, -L * 0.05); g.add(bar);
-    const bar2 = new THREE.Mesh(new THREE.BoxGeometry(W * 0.5, 0.22, 0.5),
-      new THREE.MeshBasicMaterial({ color: 0xff2222 }));
-    bar2.position.set(0, 1.95, L * 0.12); g.add(bar2);
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(W + 0.02, 0.3, L * 0.9),
-      new THREE.MeshLambertMaterial({ color: 0xffffff }));
-    stripe.position.y = 0.78; g.add(stripe);
+    box(W * 0.5, 0.22, 0.5, 0, 1.95, -L * 0.05, 0x2244ff);
+    box(W * 0.5, 0.22, 0.5, 0, 1.95, L * 0.12, 0xff2222);
+    box(W + 0.02, 0.3, L * 0.9, 0, 0.78, 0, 0xffffff);
   }
   if (typeKey === 'taxi') {
-    const sign = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.25, 0.5),
-      new THREE.MeshBasicMaterial({ color: 0x111111 }));
-    sign.position.set(0, 1.95, 0); g.add(sign);
+    box(0.9, 0.25, 0.5, 0, 1.95, 0, 0x111111);
   }
-  g.userData.wheels = wheels;
+  const g = new THREE.Group();
+  const mesh = new THREE.Mesh(mergeParts(parts), CAR_MAT);
+  g.add(mesh);
   g.userData.type = typeKey;
+  g.userData.bodyMesh = mesh;
   return g;
 }
 
@@ -104,9 +90,6 @@ export class Car {
     const f = this.forward();
     this.pos.x += f.x * this.speed * dt;
     this.pos.z += f.z * this.speed * dt;
-    // wheel spin (visual only, from sim speed)
-    const spin = this.speed * dt * 2.4;
-    for (const w of this.mesh.userData.wheels) w.rotation.x += spin;
     this.syncMesh();
   }
   // Police-style pursuit: steer toward a target point, no input needed.

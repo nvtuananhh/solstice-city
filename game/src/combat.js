@@ -40,15 +40,15 @@ export class Combat {
   spawnEnemies(x, z, count, kind) {
     const spawned = [];
     for (let i = 0; i < count; i++) {
-      const mesh = makePersonMesh(this.rng);
-      mesh.children[0].material = new THREE.MeshLambertMaterial({ color: kind === 'vault' ? 0x3a3a3a : 0x7a2f2f });
+      const baseColor = kind === 'vault' ? 0x3a3a3a : 0x7a2f2f;
+      const mesh = makePersonMesh(this.rng, baseColor);
       const ex = x + this.rng.range(-14, 14), ez = z + this.rng.range(-14, 14);
       mesh.position.set(ex, 0, ez);
       this.scene.add(mesh);
       const e = {
         mesh, x: ex, z: ez, health: 60, speed: this.rng.range(3.2, 4.4),
         shootTimer: this.rng.range(1, 2.5), walkPhase: this.rng.range(0, 6),
-        hitFlash: 0,
+        hitFlash: 0, baseColor,
       };
       this.enemies.push(e);
       spawned.push(e);
@@ -167,9 +167,9 @@ export class Combat {
       }
       if (e.hitFlash > 0) {
         e.hitFlash -= dt;
-        e.mesh.children[0].material.color.setHex(0xffffff);
+        e.mesh.scale.setScalar(1.12); // hit reaction: brief flinch
       } else {
-        e.mesh.children[0].material.color.setHex(0x7a2f2f);
+        e.mesh.scale.setScalar(1);
       }
       e.mesh.position.set(e.x, 0, e.z);
     }

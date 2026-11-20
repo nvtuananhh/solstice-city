@@ -9,7 +9,7 @@ import { AudioSys } from './audio.js';
 import { Input } from './input.js';
 import { City, districtAt } from './city.js';
 import { Sky } from './render.js';
-import { Car } from './vehicles.js';
+import { Car, makeCarMesh } from './vehicles.js';
 import { Traffic } from './traffic.js';
 import { Pedestrians, makePersonMesh } from './pedestrians.js';
 import { Police } from './police.js';
@@ -93,10 +93,8 @@ export class World {
   }
 
   buildPlayer() {
-    const mesh = makePersonMesh(this.rng);
-    // Dana: burnt-orange jacket, dark jeans, boots
-    mesh.children[0].material = new THREE.MeshLambertMaterial({ color: 0xc25a1e });
-    mesh.children[2].material = new THREE.MeshLambertMaterial({ color: 0x2a3a5a });
+    const mesh = makePersonMesh(this.rng, 0xc25a1e); // Dana: burnt-orange jacket
+    mesh.userData.legL.material.color.setHex(0x2a3a5a); // dark jeans (shared leg material)
     this.scene.add(mesh);
     this.S.player = {
       mesh, pos: new THREE.Vector3(CFG.startPos.x, 0, CFG.startPos.z),
@@ -244,7 +242,14 @@ export class World {
     if (kind === 'repaint') {
       if (S.player.car && S.cash >= price) {
         S.cash -= price;
-        S.player.car.mesh.children[0].material.color.setHex(0x3a6ea5 + Math.floor(this.rng.next() * 0x808080));
+        // rebuild the merged car mesh in a fresh colour
+        const car = S.player.car;
+        const fresh = makeCarMesh(car.type, 0x3a6ea5 + Math.floor(this.rng.next() * 0x808080));
+        fresh.position.copy(car.mesh.position);
+        fresh.rotation.copy(car.mesh.rotation);
+        this.scene.remove(car.mesh);
+        this.scene.add(fresh);
+        car.mesh = fresh;
         S.hud.toast('Repainted');
       } else S.hud.toast('Not enough cash or no car');
       return;
@@ -418,8 +423,6 @@ export class World {
     const swing = len > 0 ? Math.sin(p.walkPhase) * 0.55 : 0;
     p.mesh.userData.legL.rotation.x = swing;
     p.mesh.userData.legR.rotation.x = -swing;
-    p.mesh.userData.armL.rotation.x = -swing * 0.7;
-    p.mesh.userData.armR.rotation.x = swing * 0.7;
     p.mesh.position.set(p.pos.x, p.pos.y, p.pos.z);
     p.mesh.rotation.y = p.angle;
     p.mesh.scale.y = p.crouch ? 0.72 : 1;

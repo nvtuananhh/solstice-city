@@ -1,27 +1,34 @@
 // Pedestrians: sidewalk walkers who cross at crossings, scatter from gunfire
 // or crashes, and can be taxi customers. One seeded RNG drives every choice.
+// Each person is 3 meshes (merged torso + 2 swinging legs) to keep draw calls low.
 
 import { CFG } from './config.js';
+import { mergeParts, xform, vertexMaterial } from './merge.js';
 
 const SHIRT_COLORS = [0xc22e4a, 0x3a6ea5, 0x3a7a4a, 0xd9a83a, 0x7a4a9a, 0xd9d9d9, 0x2a2a2a, 0xe87a3a];
 const SKIN_COLORS = [0xe8b88a, 0xc98a5a, 0x8a5a38, 0xf0c8a0];
+const PED_MAT = vertexMaterial();
 
-export function makePersonMesh(rng) {
+export function makePersonMesh(rng, shirtColor) {
   const g = new THREE.Group();
-  const shirt = new THREE.MeshLambertMaterial({ color: SHIRT_COLORS[rng.int(0, SHIRT_COLORS.length - 1)] });
-  const skin = new THREE.MeshLambertMaterial({ color: SKIN_COLORS[rng.int(0, SKIN_COLORS.length - 1)] });
-  const pants = new THREE.MeshLambertMaterial({ color: rng.pick([0x2a3a5a, 0x3a3a3a, 0x5a4a3a]) });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.75, 0.32), shirt);
-  body.position.y = 1.05; g.add(body);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), skin);
-  head.position.y = 1.62; g.add(head);
-  const legL = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.7, 0.2), pants);
+  const shirt = shirtColor !== undefined ? shirtColor : SHIRT_COLORS[rng.int(0, SHIRT_COLORS.length - 1)];
+  const skin = SKIN_COLORS[rng.int(0, SKIN_COLORS.length - 1)];
+  const pants = rng.pick([0x2a3a5a, 0x3a3a3a, 0x5a4a3a]);
+  // torso: body + head + arms merged into one vertex-colour mesh
+  const parts = [
+    { geo: new THREE.BoxGeometry(0.55, 0.75, 0.32), matrix: xform(0, 1.05, 0), color: shirt },
+    { geo: new THREE.SphereGeometry(0.22, 10, 8), matrix: xform(0, 1.62, 0), color: skin },
+    { geo: new THREE.BoxGeometry(0.16, 0.6, 0.16), matrix: xform(-0.36, 1.05, 0), color: shirt },
+    { geo: new THREE.BoxGeometry(0.16, 0.6, 0.16), matrix: xform(0.36, 1.05, 0), color: shirt },
+  ];
+  const torso = new THREE.Mesh(mergeParts(parts), PED_MAT);
+  g.add(torso);
+  const legMat = new THREE.MeshLambertMaterial({ color: pants });
+  const legL = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.7, 0.2), legMat);
   legL.position.set(-0.14, 0.35, 0); g.add(legL);
-  const legR = legL.clone(); legR.position.x = 0.14; g.add(legR);
-  const armL = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.6, 0.16), shirt);
-  armL.position.set(-0.36, 1.05, 0); g.add(armL);
-  const armR = armL.clone(); armR.position.x = 0.36; g.add(armR);
-  g.userData = { legL, legR, armL, armR };
+  const legR = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.7, 0.2), legMat);
+  legR.position.set(0.14, 0.35, 0); g.add(legR);
+  g.userData = { legL, legR, torso, shirt };
   return g;
 }
 
@@ -96,8 +103,6 @@ export class Pedestrians {
       const swing = Math.sin(p.walkPhase) * 0.5;
       p.mesh.userData.legL.rotation.x = swing;
       p.mesh.userData.legR.rotation.x = -swing;
-      p.mesh.userData.armL.rotation.x = -swing * 0.7;
-      p.mesh.userData.armR.rotation.x = swing * 0.7;
       p.mesh.position.set(p.x, 0, p.z);
     }
   }
