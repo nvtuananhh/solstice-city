@@ -8,7 +8,7 @@ export function saveGame(S) {
   try {
     const data = {
       v: 1,
-      jobIndex: S.jobIndex,
+      jobIndex: S.missions.jobIndex,
       cash: S.cash,
       respect: S.respect,
       health: S.health,
