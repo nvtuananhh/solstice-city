@@ -21,9 +21,10 @@ export function stageShot(mode, world) {
     world.camYaw = Math.PI;
     world.demoKeys = ['w'];
     S.police.setWanted(4);
-    // low helicopter, ending up north of the player (in the camera's view)
+    // low helicopter, ending up SOUTH of the player (in the camera's view,
+    // since the camera sits ahead of the chase looking back)
     S.police.heliAlt = 26;
-    S.police.heliAngle = -Math.PI / 2 - 2.2;
+    S.police.heliAngle = Math.PI / 2 - 2.2;
     // pre-place chasers close behind so the frame is full of police
     for (let i = 0; i < 3; i++) {
       const pc = S.police.spawnCar(0, 120 + 18 + i * 12);
@@ -34,7 +35,9 @@ export function stageShot(mode, world) {
     for (const t of S.traffic.cars.slice(0, 6)) {
       t.pos.set((Math.abs(Math.floor(t.pos.x)) % 7 - 3) * 14, 0, 120 - 40 - (Math.abs(Math.floor(t.pos.z)) % 30));
     }
-    world.fixedCamera = { follow: true, off: [22, 7, 30], lookOff: [-2, 2, -20] };
+    // camera AHEAD of the chase, looking back south: the pickup faces the
+    // camera, the police trail behind it, nothing occludes the player car.
+    world.fixedCamera = { follow: true, off: [16, 7, -30], lookOff: [0, 2, 14] };
   } else if (mode === 'onfoot') {
     // Dana on foot among pedestrians and storefronts, noon.
     S.clock = 12.0; S.day = 1;
@@ -77,7 +80,9 @@ export function stageShot(mode, world) {
     p.mesh.position.copy(p.pos);
     S.combat.giveWeapon(3, 90);
     S.combat.select(3); // SMG
-    S.police.setWanted(2);
+    // no wanted level here: police cars would drive onto the player and block
+    // the frame; the crew + SMG + rooftop carry the combat shot.
+    S.police.setWanted(0);
     S.combat.spawnEnemies(120, -120, 4, 'crew');
     // keep enemies OUTSIDE the rooftop building (south side, in the open)
     S.combat.enemies.forEach((e, i) => {
