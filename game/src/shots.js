@@ -21,6 +21,9 @@ export function stageShot(mode, world) {
     world.camYaw = Math.PI;
     world.demoKeys = ['w'];
     S.police.setWanted(4);
+    // low helicopter, ending up north of the player (in the camera's view)
+    S.police.heliAlt = 26;
+    S.police.heliAngle = -Math.PI / 2 - 2.2;
     // pre-place chasers close behind so the frame is full of police
     for (let i = 0; i < 3; i++) {
       const pc = S.police.spawnCar(0, 120 + 18 + i * 12);
@@ -31,7 +34,7 @@ export function stageShot(mode, world) {
     for (const t of S.traffic.cars.slice(0, 6)) {
       t.pos.set((Math.abs(Math.floor(t.pos.x)) % 7 - 3) * 14, 0, 120 - 40 - (Math.abs(Math.floor(t.pos.z)) % 30));
     }
-    world.fixedCamera = { follow: true, off: [14, 7, 34], lookOff: [0, 2, -24] };
+    world.fixedCamera = { follow: true, off: [10, 6, 28], lookOff: [0, 2, -20] };
   } else if (mode === 'onfoot') {
     // Dana on foot among pedestrians and storefronts, noon.
     S.clock = 12.0; S.day = 1;
@@ -42,15 +45,17 @@ export function stageShot(mode, world) {
     S.combat.select(2); // pistol out, crosshair visible
     // gather pedestrians around the storefront
     S.peds.list.slice(0, 8).forEach((ped, i) => {
-      ped.x = -14 + i * 4; ped.z = 44 - (i % 3) * 4; ped.waiting = false;
+      ped.x = -6 + i * 3; ped.z = 42 - (i % 3) * 3; ped.waiting = false;
       ped.mesh.position.set(ped.x, 0, ped.z);
     });
-    world.fixedCamera = { pos: [20, 5, 58], look: [0, 2, 34] };
+    world.fixedCamera = { pos: [15, 3.5, 48], look: [5, 1.5, 36] };
   } else if (mode === 'driving') {
-    // Driving the coupe toward the Helios Tower, noon, traffic + minimap.
+    // Driving the pickup toward the Helios Tower, noon, traffic + minimap.
     S.clock = 11.0; S.day = 1;
     world.missions.startJob(0);
-    const car = world.parked.find((c) => c.type === 'coupe') || world.parked[0];
+    world.missions.stepIndex = 1; // objective: drive to the Heliostat Sea
+    world.missions.updateMarker();
+    const car = world.parked.find((c) => c.jobCar) || world.parked[0];
     world.enterCar(car, false);
     p.pos.set(-40, 0, -40);
     car.pos.set(-40, 0, -40);
@@ -62,7 +67,7 @@ export function stageShot(mode, world) {
     for (const t of S.traffic.cars.slice(0, 5)) {
       t.pos.set(-40 + (Math.abs(Math.floor(t.pos.x)) % 20), 0, -40 - 30 - (Math.abs(Math.floor(t.pos.z)) % 40));
     }
-    world.fixedCamera = { follow: true, off: [13, 6.5, 32], lookOff: [0, 2, -24] };
+    world.fixedCamera = { follow: true, off: [9, 5.5, 24], lookOff: [0, 2, -18] };
   } else if (mode === 'mission') {
     // Job 6 rooftop combat at dusk: enemies closing in, muzzle flash, tower behind.
     S.clock = 18.6; S.day = 1;
@@ -79,7 +84,7 @@ export function stageShot(mode, world) {
       e.x = 116 + i * 3; e.z = -104 + (i % 2) * 5;
       e.mesh.position.set(e.x, 0, e.z);
     });
-    world.fixedCamera = { pos: [100, 6, -88], look: [118, 2, -106] };
+    world.fixedCamera = { pos: [104, 4.5, -94], look: [114, 1.5, -104] };
   } else {
     // unknown shot: plain title-screen-free overview
     S.clock = 12.0;

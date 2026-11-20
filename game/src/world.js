@@ -588,6 +588,8 @@ export class World {
 
   updateInteract(dt) {
     const S = this.S, p = S.player;
+    // no interact prompts in deterministic shots — they would cover the action
+    if (this.shotMode) { this.hud.setInteract(null); return; }
     if (p.inCar) { this.hud.setInteract('E — Exit car'); return; }
     const d = (L) => Math.hypot(L.x - p.pos.x, L.z - p.pos.z);
     let label = null;

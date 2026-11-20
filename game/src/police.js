@@ -23,6 +23,7 @@ export class Police {
     this.arrestTimer = 0;
     this.busted = false;
     this.heliAngle = 0;
+    this.heliAlt = 58; // shot staging may lower this to put the heli in frame
   }
 
   addWanted(n, reason) {
@@ -115,7 +116,7 @@ export class Police {
     if (this.heli) {
       this.heliAngle += dt * 0.55;
       const r = 26;
-      this.heli.position.set(px + Math.cos(this.heliAngle) * r, 58 + Math.sin(simTime * 0.7) * 3, pz + Math.sin(this.heliAngle) * r);
+      this.heli.position.set(px + Math.cos(this.heliAngle) * r, this.heliAlt + Math.sin(simTime * 0.7) * 3, pz + Math.sin(this.heliAngle) * r);
       this.heli.rotation.y = -this.heliAngle;
       this.heli.userData.rotor.rotation.y += dt * 22;
       this.heli.userData.rotor2.rotation.y += dt * 22;
