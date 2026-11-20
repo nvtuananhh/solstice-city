@@ -647,17 +647,17 @@ export class World {
   // ---- main loop ----
   loop(ts) {
     if (this.shotMode) return;
-    const dtMs = this.lastTs ? Math.min(100, ts - this.lastTs) : 16.7;
+    const dtMs = this.lastTs ? Math.min(500, ts - this.lastTs) : 16.7;
     this.lastTs = ts;
     if (this.running && !this.paused) {
       this.acc += dtMs / 1000;
       let n = 0;
-      while (this.acc >= CFG.step && n < 5) {
+      while (this.acc >= CFG.step && n < 30) {
         this.step(CFG.step);
         this.acc -= CFG.step;
         n++;
       }
-      if (n === 5) this.acc = 0;
+      if (n === 30) this.acc = 0;
     }
     this.render();
     requestAnimationFrame((t) => this.loop(t));
