@@ -1,7 +1,7 @@
 // Deterministic screenshot staging. Each mode places the player, cars, police,
 // enemies and time of day from the seeded RNG only, fixes the camera, and lets
 // the world run a fixed number of fixed steps. No wall-clock reads, no
-// Math.random — two runs with the same seed stage byte-identical frames.
+// unseeded randomness — two runs with the same seed stage byte-identical frames.
 
 export function stageShot(mode, world) {
   const S = world.S;

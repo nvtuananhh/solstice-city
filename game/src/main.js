@@ -48,7 +48,7 @@ window.__game = {
   startJob(i) { world.missions.startJob(i); },
   newGame() { world.newGame(); },
   key(k, down) { world.input.injectKey(k, down); },
-  tapKey(k) { world.input.injectKey(k, true); setTimeout(() => world.input.injectKey(k, false), 50); },
+  tapKey(k) { world.input.injectKey(k, true); setTimeout(() => world.input.injectKey(k, false), 150); },
   mouse(dx, dy) { world.input.injectMouse(dx, dy); },
   click() { world.clickQueued = true; },
   save() { world.saveGame(); },

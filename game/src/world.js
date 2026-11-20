@@ -105,7 +105,7 @@ export class World {
   buildParkedCars() {
     this.parked = [];
     const spots = [
-      { type: 'pickup', x: -228, z: 196, angle: Math.PI / 2, color: 0xb8642a, jobCar: true },
+      { type: 'pickup', x: -214, z: 200, angle: Math.PI / 2, color: 0xb8642a, jobCar: true },
       { type: 'sedan', x: 228, z: -188, angle: -Math.PI / 2, color: 0x3a6ea5, chopCar: true },
       { type: 'coupe', x: -36, z: 44, angle: 0, color: 0xc22e4a },
       { type: 'sedan', x: 84, z: -36, angle: Math.PI, color: 0x7a8a9a },

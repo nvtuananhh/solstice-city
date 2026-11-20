@@ -16,7 +16,7 @@ export const CFG = {
   playerRadius: 0.7,
   playerHealth: 100,
   startCash: 120,
-  startPos: { x: -216, z: 168 },
+  startPos: { x: -200, z: 200 }, // road intersection, clear of buildings
   clockStart: 12.0, // hours
   clockRate: 1 / 150, // game hours per real second (a full day ~ 10 min)
   duskStart: 17.5,
