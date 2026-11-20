@@ -54,6 +54,8 @@ export class HUD {
     this.bannerTimer = 3;
   }
   toast(text) {
+    // deterministic shots stay clean: no transient toasts over the action
+    if (this.S.world.shotMode) return;
     this.el.toast.textContent = text;
     this.el.toast.style.display = 'block';
     this.toastTimer = 3.5;
