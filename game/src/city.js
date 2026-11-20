@@ -268,7 +268,7 @@ export class City {
     // rooftop building + ramp
     const r = LANDMARKS.rooftop;
     add(new THREE.Mesh(new THREE.BoxGeometry(24, 10, 20),
-      new THREE.MeshLambertMaterial({ color: 0x6a7a8a })), r.x, 5, r.z);
+      new THREE.MeshLambertMaterial({ map: facadeTexture(rng, '#6a7a8a') })), r.x, 5, r.z);
     const ramp = add(new THREE.Mesh(new THREE.BoxGeometry(6, 0.6, 16),
       new THREE.MeshLambertMaterial({ color: 0x8a8f96 })), r.x - 14, 5, r.z + 4);
     ramp.rotation.z = 0.62;

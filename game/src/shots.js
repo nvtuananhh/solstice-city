@@ -34,21 +34,21 @@ export function stageShot(mode, world) {
     for (const t of S.traffic.cars.slice(0, 6)) {
       t.pos.set((Math.abs(Math.floor(t.pos.x)) % 7 - 3) * 14, 0, 120 - 40 - (Math.abs(Math.floor(t.pos.z)) % 30));
     }
-    world.fixedCamera = { follow: true, off: [10, 6, 28], lookOff: [0, 2, -20] };
+    world.fixedCamera = { follow: true, off: [22, 7, 30], lookOff: [-2, 2, -20] };
   } else if (mode === 'onfoot') {
     // Dana on foot among pedestrians and storefronts, noon.
     S.clock = 12.0; S.day = 1;
     world.missions.startJob(0);
-    p.pos.set(8, 0, 36);
+    p.pos.set(5, 0, 36);
     p.angle = Math.PI * 0.9;
     p.mesh.position.copy(p.pos);
     S.combat.select(2); // pistol out, crosshair visible
     // gather pedestrians around the storefront
     S.peds.list.slice(0, 8).forEach((ped, i) => {
-      ped.x = -6 + i * 3; ped.z = 42 - (i % 3) * 3; ped.waiting = false;
+      ped.x = -4 + i * 3; ped.z = 42 - (i % 3) * 3; ped.waiting = false;
       ped.mesh.position.set(ped.x, 0, ped.z);
     });
-    world.fixedCamera = { pos: [15, 3.5, 48], look: [5, 1.5, 36] };
+    world.fixedCamera = { pos: [13, 3.2, 47], look: [5, 1.5, 35] };
   } else if (mode === 'driving') {
     // Driving the pickup toward the Helios Tower, noon, traffic + minimap.
     S.clock = 11.0; S.day = 1;
@@ -72,7 +72,7 @@ export function stageShot(mode, world) {
     // Job 6 rooftop combat at dusk: enemies closing in, muzzle flash, tower behind.
     S.clock = 18.6; S.day = 1;
     world.missions.startJob(5); // Job 6: The Witness
-    p.pos.set(112, 0, -100);
+    p.pos.set(112, 0, -88);
     p.angle = -Math.PI * 0.25;
     p.mesh.position.copy(p.pos);
     S.combat.giveWeapon(3, 90);
@@ -81,10 +81,10 @@ export function stageShot(mode, world) {
     S.combat.spawnEnemies(120, -120, 4, 'crew');
     // keep enemies OUTSIDE the rooftop building (south side, in the open)
     S.combat.enemies.forEach((e, i) => {
-      e.x = 116 + i * 3; e.z = -104 + (i % 2) * 5;
+      e.x = 116 + i * 3; e.z = -92 + (i % 2) * 4;
       e.mesh.position.set(e.x, 0, e.z);
     });
-    world.fixedCamera = { pos: [104, 4.5, -94], look: [114, 1.5, -104] };
+    world.fixedCamera = { pos: [100, 5, -76], look: [114, 2, -92] };
   } else {
     // unknown shot: plain title-screen-free overview
     S.clock = 12.0;
