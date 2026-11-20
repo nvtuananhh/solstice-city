@@ -37,7 +37,7 @@ export function stageShot(mode, world) {
     }
     // camera AHEAD of the chase, looking back south: the pickup faces the
     // camera, the police trail behind it, nothing occludes the player car.
-    world.fixedCamera = { follow: true, off: [8, 7, -32], lookOff: [-2, 2, 14] };
+    world.fixedCamera = { follow: true, off: [16, 7, -30], lookOff: [0, 2, 14] };
   } else if (mode === 'onfoot') {
     // Dana on foot among pedestrians and storefronts, noon.
     S.clock = 12.0; S.day = 1;
