@@ -9,9 +9,10 @@ import { CFG } from './config.js';
 const params = new URLSearchParams(window.location.search);
 const seed = Number(params.get('seed') || CFG.seedDefault) || CFG.seedDefault;
 const shot = params.get('shot') || null;
+const perfLow = params.get('perf') === 'low';
 
 const canvas = document.getElementById('game');
-const world = new World(canvas, { seed, shot });
+const world = new World(canvas, { seed, shot, perfLow });
 
 window.__game = {
   world,

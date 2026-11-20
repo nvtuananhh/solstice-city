@@ -47,7 +47,11 @@ export class World {
     this.input = new Input(canvas);
 
     // --- three.js ---
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+    this.renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: !opts.perfLow,
+      preserveDrawingBuffer: !opts.perfLow,
+    });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.scene = new THREE.Scene();
