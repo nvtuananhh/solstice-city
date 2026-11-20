@@ -3,17 +3,80 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Block Dodger</title>
+<title>SOLSTICE CITY — open-world crime</title>
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #11141b; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1208; font-family: 'Segoe UI', system-ui, sans-serif; }
   #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-  /* Read aloud, never shown: the status line screen readers announce. */
+  #hud { position: fixed; inset: 0; pointer-events: none; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8); }
+  .panel { background: rgba(10,8,4,.55); border: 1px solid rgba(255,255,255,.18); border-radius: 8px; }
+  #topleft { position: absolute; top: 12px; left: 12px; padding: 8px 12px; min-width: 210px; }
+  #healthbar { width: 190px; height: 12px; background: rgba(0,0,0,.6); border-radius: 6px; overflow: hidden; margin: 4px 0 6px; }
+  #healthfill { height: 100%; width: 100%; background: linear-gradient(90deg,#37d67a,#a5e34d); }
+  #stars { font-size: 22px; letter-spacing: 3px; color: #ffd23f; min-height: 26px; }
+  #stars .off { color: rgba(255,255,255,.25); }
+  #cashline, #respectline, #clockline, #districtline { font-size: 14px; line-height: 1.5; }
+  #objective { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); padding: 8px 18px; font-size: 15px; font-weight: 600; text-align: center; max-width: 46vw; }
+  #objective small { display: block; font-weight: 400; font-size: 12px; opacity: .85; }
+  #minimap { position: absolute; left: 12px; bottom: 12px; width: 190px; height: 190px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); background: rgba(20,16,8,.72); }
+  #speedo { position: absolute; right: 16px; bottom: 14px; padding: 8px 14px; font-size: 26px; font-weight: 700; text-align: right; display: none; }
+  #speedo small { display: block; font-size: 11px; font-weight: 400; }
+  #ammo { position: absolute; right: 16px; bottom: 96px; padding: 6px 12px; font-size: 16px; display: none; }
+  #weaponname { position: absolute; right: 16px; bottom: 140px; padding: 4px 10px; font-size: 13px; display: none; }
+  #interact { position: absolute; left: 50%; bottom: 22%; transform: translateX(-50%); padding: 7px 16px; font-size: 15px; display: none; }
+  #banner { position: absolute; left: 50%; top: 34%; transform: translate(-50%,-50%); font-size: 42px; font-weight: 800; letter-spacing: 2px; color: #ffe9a8; display: none; text-align: center; }
+  #banner small { display: block; font-size: 18px; letter-spacing: 1px; color: #fff; }
+  #toast { position: absolute; left: 50%; bottom: 30%; transform: translateX(-50%); padding: 6px 14px; font-size: 14px; display: none; }
+  #crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; display: none; }
+  #crosshair:before, #crosshair:after { content: ''; position: absolute; background: #fff; box-shadow: 0 0 3px #000; }
+  #crosshair:before { left: 10px; top: 0; width: 2px; height: 22px; }
+  #crosshair:after { top: 10px; left: 0; width: 22px; height: 2px; }
+  #wheel { position: absolute; left: 50%; top: 50%; width: 260px; height: 260px; margin: -130px 0 0 -130px; display: none; }
+  .wslot { position: absolute; width: 104px; height: 52px; padding: 6px; box-sizing: border-box; text-align: center; font-size: 13px; border-radius: 8px; background: rgba(10,8,4,.65); border: 2px solid rgba(255,255,255,.25); }
+  .wslot.sel { border-color: #ffd23f; background: rgba(120,90,10,.8); }
+  .wslot b { display: block; font-size: 14px; }
+  #menu { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, rgba(60,30,0,.88), rgba(10,5,0,.94)); color: #fff; z-index: 10; }
+  #menu .box { max-width: 640px; padding: 28px 36px; text-align: center; }
+  #menu h1 { margin: 0 0 4px; font-size: 52px; letter-spacing: 4px; color: #ffd23f; }
+  #menu h2 { margin: 0 0 14px; font-size: 15px; font-weight: 400; color: #ffb46b; letter-spacing: 2px; }
+  #menu p { font-size: 14px; line-height: 1.6; color: #f3e2c2; }
+  #menu .btn { pointer-events: auto; display: inline-block; margin: 6px; padding: 10px 26px; font-size: 16px; font-weight: 700; color: #1a1208; background: #ffd23f; border: none; border-radius: 8px; cursor: pointer; }
+  #menu .btn.ghost { background: transparent; color: #ffd23f; border: 2px solid #ffd23f; }
+  #menu .controls { text-align: left; font-size: 13px; line-height: 1.8; column-count: 2; margin: 12px 0; }
+  #menu input[type=range] { width: 180px; }
+  #shardline { font-size: 13px; color: #ffe9a8; }
   #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 </style>
 </head>
 <body>
-<canvas id="game" aria-label="Block Dodger: move the paddle left and right to dodge falling blocks and catch coins"></canvas>
+<canvas id="game" aria-label="SOLSTICE CITY: open-world crime game"></canvas>
+<div id="hud">
+  <div id="topleft" class="panel">
+    <div id="healthbar"><div id="healthfill"></div></div>
+    <div id="stars"></div>
+    <div id="cashline">$0</div>
+    <div id="respectline">Respect 0 &middot; <span id="shardline">Sun shards 0/25</span></div>
+    <div id="clockline">12:00 &middot; Day 1</div>
+    <div id="districtline">Mirror Flats</div>
+  </div>
+  <div id="objective" class="panel"><span id="objtitle">SOLSTICE CITY</span><small id="objsub">Meet Theo at the garage</small></div>
+  <canvas id="minimap" width="190" height="190"></canvas>
+  <div id="speedo" class="panel"><span id="speedval">0</span> km/h<small id="carname">Pickup</small></div>
+  <div id="ammo" class="panel">--</div>
+  <div id="weaponname" class="panel">Fists</div>
+  <div id="interact" class="panel">E — Enter car</div>
+  <div id="banner"></div>
+  <div id="toast" class="panel"></div>
+  <div id="crosshair"></div>
+  <div id="wheel">
+    <div class="wslot" data-w="0" style="left:78px;top:0"><b>&#9994; Fists</b><span>&infin;</span></div>
+    <div class="wslot" data-w="1" style="right:0;top:78px"><b>&#127993; Bat</b><span>&infin;</span></div>
+    <div class="wslot" data-w="2" style="left:78px;bottom:0"><b>&#128299; Pistol</b><span id="wammo2">0</span></div>
+    <div class="wslot" data-w="3" style="left:0;top:78px"><b>&#128296; SMG</b><span id="wammo3">0</span></div>
+  </div>
+</div>
+<div id="menu"><div class="box" id="menubox"></div></div>
 <p id="status" role="status" aria-live="polite"></p>
+<script src="./vendor/three.min.js"></script>
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>
