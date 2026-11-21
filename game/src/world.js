@@ -249,7 +249,7 @@ export class World {
       this.traffic.update(dt, this.playerCar, this.player);
       this.pedestrians.update(dt, this.gunfirePos, this.crashPos);
       const decay = this.police.update(dt, this.wanted, this.player, this.playerCar,
-        this.standing.decayFactor(districtAt(this.player.x, this.player.z)));
+        this.standing.decayFactor(districtAt(this.player.x, this.player.z)), this._inTunnels());
       if (decay === 'decay') this.setWanted(this.wanted - 1);
       this.combat.update(dt, this.player);
       this.missions.update(dt);
@@ -713,9 +713,14 @@ export class World {
     this._openShop();
   }
 
+  _inTunnels() {
+    // Foundry tunnels: the hideout where the cops lose the trail.
+    return Math.hypot(this.player.x - LANDMARKS.foundry.x, this.player.z - LANDMARKS.foundry.z) < 50;
+  }
+
   _updateWanted(dt) {
     // Foundry tunnels break line of sight: decay much faster there.
-    const inFoundry = Math.hypot(this.player.x - LANDMARKS.foundry.x, this.player.z - LANDMARKS.foundry.z) < 35;
+    const inFoundry = this._inTunnels();
     if (inFoundry && this.wanted > 0) {
       this._tunnelTimer = (this._tunnelTimer || 0) + dt;
       if (this._tunnelTimer > 3) {
@@ -723,7 +728,11 @@ export class World {
         this.setWanted(this.wanted - 1);
         this.toast('Lost them in the tunnels', `${this.wanted} stars left`);
       }
-    } else this._tunnelTimer = 0;
+    } else if (this._tunnelTimer) {
+      // Being shoved briefly out of the tunnels no longer wipes the
+      // hiding progress — it just stops building.
+      this._tunnelTimer = Math.max(0, this._tunnelTimer - dt);
+    }
     if (this.gunfireTimer > 0) this.gunfireTimer -= dt;
     else this.gunfirePos = null;
   }

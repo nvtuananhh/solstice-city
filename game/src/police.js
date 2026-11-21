@@ -53,7 +53,7 @@ export class Police {
     return { mesh: g, rotor, light };
   }
 
-  update(dt, wanted, player, playerCar, decayFactor = 1) {
+  update(dt, wanted, player, playerCar, decayFactor = 1, inTunnels = false) {
     const px = player.x, pz = player.z;
     const inCar = !!playerCar;
 
@@ -87,12 +87,14 @@ export class Police {
       while (dh > Math.PI) dh -= Math.PI * 2;
       while (dh < -Math.PI) dh += Math.PI * 2;
       const steer = Math.max(-1, Math.min(1, dh * 1.5));
-      const throttle = dist > 6 ? 1 : 0.3;
+      // In the foundry tunnels the cops lose the trail: they stop chasing
+      // and stop ramming, so a hidden player can actually shake them.
+      const throttle = inTunnels ? 0 : (dist > 6 ? 1 : 0.3);
       car.drive(dt, steer, throttle, false, false);
       [car.x, car.z] = this.city.collide(car.x, car.z, 1.2, 2);
       car.mesh.position.set(car.x, 0, car.z);
-      // Ram the player car: shove + damage on contact.
-      if (playerCar && dist < 4.5) {
+      // Ram the player car: shove + damage on contact (not in the tunnels).
+      if (playerCar && dist < 4.5 && !inTunnels) {
         playerCar.damage(6 * dt * 10);
         playerCar.speed *= (1 - 0.4 * dt);
         const push = 3 * dt;
