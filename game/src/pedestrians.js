@@ -60,14 +60,15 @@ export class Pedestrians {
 
   update(dt, gunfirePos, crashPos) {
     for (const p of this.peds) {
-      if (gunfirePos && Math.hypot(p.x - gunfirePos.x, p.z - gunfirePos.z) < 25) p.scatter = 3;
-      if (crashPos && Math.hypot(p.x - crashPos.x, p.z - crashPos.z) < 12) p.scatter = 2;
+      if (gunfirePos && Math.hypot(p.x - gunfirePos.x, p.z - gunfirePos.z) < 25) { p.scatter = 3; p.fleeFrom = gunfirePos; }
+      if (crashPos && Math.hypot(p.x - crashPos.x, p.z - crashPos.z) < 12) { p.scatter = 2; p.fleeFrom = crashPos; }
       let tx, tz, speed = p.speed;
       if (p.scatter > 0) {
         p.scatter -= dt;
         // Run away from the disturbance, along the sidewalk direction.
-        const dx = p.x - (gunfirePos?.x ?? crashPos.x);
-        const dz = p.z - (gunfirePos?.z ?? crashPos.z);
+        const from = p.fleeFrom || { x: p.x, z: p.z };
+        const dx = p.x - from.x;
+        const dz = p.z - from.z;
         const len = Math.hypot(dx, dz) || 1;
         tx = p.x + (dx / len) * 10; tz = p.z + (dz / len) * 10;
         speed = 5.5;

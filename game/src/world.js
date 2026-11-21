@@ -380,7 +380,7 @@ export class World {
     const hits = this.combat.playerMelee(this.player, this.player.heading, w, targets);
     if (hits.length === 0 && ped) {
       // Shoving a pedestrian counts as assault.
-      ped.scatter = 2;
+      ped.scatter = 2; ped.fleeFrom = { x: this.player.x, z: this.player.z };
       this.addWanted(1);
       this.toast('Assault!', 'The cops noticed that.');
     }
@@ -403,7 +403,7 @@ export class World {
     } else {
       // A stray shot near pedestrians scatters them; shooting at all is a crime.
       const ped = this.pedestrians.nearest(this.player.x + dir.x * 10, this.player.z + dir.z * 10, 8);
-      if (ped) ped.scatter = 3;
+      if (ped) { ped.scatter = 3; ped.fleeFrom = { x: this.player.x, z: this.player.z }; }
       if (this.police.nearestPoliceDist(this.player.x, this.player.z) < 60) this.addWanted(1);
       else this.addWanted(1); // gunfire draws a star regardless in this city
     }
@@ -453,7 +453,7 @@ export class World {
     // Run over a pedestrian? They scatter, but a hit is a crime.
     const ped = this.pedestrians.nearest(car.x, car.z, 2.2);
     if (ped && Math.abs(car.speed) > 3) {
-      ped.scatter = 3;
+      ped.scatter = 3; ped.fleeFrom = { x: car.x, z: car.z };
       this.addWanted(1);
       car.damage(1);
     }
