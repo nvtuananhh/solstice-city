@@ -146,13 +146,18 @@ export class World {
   }
 
   _makeRaceFlag() {
+    // The flag stands at the (-60,-60) intersection — the same spot as
+    // Missions.raceStart and the Plaza Loop's first checkpoint. (It used to
+    // sit at (-30,-30), the centre of a building block, where the collision
+    // push-out shoved the player outside the 8 m trigger radius, so the
+    // race could never start.)
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 6, 6),
       new THREE.MeshLambertMaterial({ color: 0xdddddd }));
-    pole.position.set(-30, 3, -30);
+    pole.position.set(-60, 3, -60);
     this.scene.add(pole);
     const flag = new THREE.Mesh(new THREE.PlaneGeometry(3, 2),
       new THREE.MeshBasicMaterial({ color: 0xffd23c, side: THREE.DoubleSide }));
-    flag.position.set(-28.4, 5, -30);
+    flag.position.set(-58.4, 5, -60);
     this.scene.add(flag);
   }
 
@@ -542,7 +547,7 @@ export class World {
       if (inp.wasPressed('KeyE')) this._openShop();
       return;
     }
-    if (Math.hypot(p.x + 30, p.z + 30) < 8) {
+    if (Math.hypot(p.x + 60, p.z + 60) < 8) {
       this.hud.showInteract(`Press E — Start race: ${RACES[this.raceIdx].name}`);
       if (inp.wasPressed('KeyE')) {
         this.missions.startRace(this.raceIdx);
