@@ -126,6 +126,9 @@ export class Police {
       f.z += -Math.sin(heading) * speed * dt;
       f.mesh.position.set(f.x, 0, f.z);
       f.mesh.rotation.y = -heading;
+      // An officer can only arrest a player on foot — never through a car
+      // window. While the player drives, the arrest timer stays at zero.
+      if (inCar) { f.arrestTimer = 0; continue; }
       if (dist < 2.0) {
         f.arrestTimer += dt;
         if (f.arrestTimer > 3) {
