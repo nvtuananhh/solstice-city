@@ -3,17 +3,98 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Block Dodger</title>
+<title>SOLSTICE CITY — desert open-world crime</title>
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #11141b; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1208; font-family: 'Segoe UI', Arial, sans-serif; }
   #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-  /* Read aloud, never shown: the status line screen readers announce. */
+  #hud { position: fixed; inset: 0; pointer-events: none; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8); z-index: 5; }
+  .panel { background: rgba(10,10,14,.55); border: 1px solid rgba(255,255,255,.18); border-radius: 8px; padding: 6px 10px; }
+  #topleft { position: absolute; top: 12px; left: 12px; display: flex; flex-direction: column; gap: 6px; }
+  #healthwrap { width: 220px; height: 14px; background: rgba(0,0,0,.6); border: 1px solid #fff3; border-radius: 7px; overflow: hidden; }
+  #healthbar { height: 100%; width: 100%; background: linear-gradient(90deg,#ff5a3c,#ffb03c); }
+  #cashline { font-size: 20px; font-weight: 700; color: #ffe9a8; }
+  #respectline { font-size: 13px; color: #cfe8ff; }
+  #stars { font-size: 26px; letter-spacing: 4px; color: #ffd23c; min-height: 30px; }
+  #stars .off { color: rgba(255,255,255,.25); }
+  #clockline { font-size: 13px; }
+  #districtline { font-size: 13px; color: #ffd9a0; }
+  #objective { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); text-align: center; max-width: 560px; }
+  #objtitle { font-size: 19px; font-weight: 800; color: #ffd23c; letter-spacing: 1px; }
+  #objtext { font-size: 14px; margin-top: 2px; }
+  #mirastatus { font-size: 13px; color: #9fe8b0; margin-top: 2px; }
+  #minimapwrap { position: absolute; right: 12px; top: 12px; text-align: center; }
+  #minimap { width: 190px; height: 190px; border-radius: 50%; border: 2px solid rgba(255,255,255,.5); background: rgba(8,12,10,.7); }
+  #standingpanel { margin-top: 6px; font-size: 11px; text-align: left; line-height: 1.5; color: #ffe9a8; }
+  #bottomright { position: absolute; right: 12px; bottom: 12px; text-align: right; }
+  #speedo { font-size: 34px; font-weight: 800; color: #fff; }
+  #speedunit { font-size: 13px; color: #ddd; }
+  #ammo { font-size: 16px; margin-top: 2px; }
+  #weaponname { font-size: 13px; color: #ffd23c; }
+  #interact { position: absolute; left: 50%; bottom: 22%; transform: translateX(-50%); font-size: 16px; padding: 8px 16px; display: none; }
+  #crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; display: none; }
+  #crosshair::before, #crosshair::after { content: ''; position: absolute; background: #fff; box-shadow: 0 0 3px #000; }
+  #crosshair::before { left: 10px; top: 0; width: 2px; height: 22px; }
+  #crosshair::after { left: 0; top: 10px; width: 22px; height: 2px; }
+  #wheel { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); display: none; gap: 10px; }
+  .wheelslot { width: 92px; padding: 10px 6px; text-align: center; border-radius: 10px; background: rgba(10,10,14,.75); border: 2px solid rgba(255,255,255,.3); }
+  .wheelslot.sel { border-color: #ffd23c; background: rgba(60,45,5,.85); }
+  .wheelslot .wn { font-weight: 800; font-size: 15px; }
+  .wheelslot .wa { font-size: 12px; color: #cfe8ff; }
+  #toast { position: absolute; left: 50%; bottom: 14%; transform: translateX(-50%); font-size: 17px; font-weight: 700; color: #ffe9a8; display: none; text-align: center; }
+  #screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; z-index: 10; background: radial-gradient(ellipse at 50% 30%, rgba(255,170,60,.25), rgba(20,8,0,.88) 75%); color: #fff; text-align: center; }
+  #screen h1 { font-size: 64px; margin: 0; letter-spacing: 6px; color: #ffb03c; text-shadow: 0 0 30px rgba(255,140,0,.7), 0 2px 0 #000; }
+  #screen h2 { font-size: 20px; font-weight: 400; margin: 6px 0 18px; color: #ffe9a8; }
+  #screen .story { max-width: 640px; font-size: 15px; line-height: 1.6; color: #f3e6c8; margin: 0 20px 22px; }
+  #screen button { pointer-events: auto; font-size: 18px; padding: 12px 34px; margin: 6px; border-radius: 8px; border: 1px solid #ffb03c; background: #3a2405; color: #ffe9a8; cursor: pointer; }
+  #screen button:hover { background: #6b3f08; }
+  #screen .controls { font-size: 13px; line-height: 1.9; color: #d8d8d8; margin-top: 16px; }
+  #screen .small { font-size: 12px; color: #aaa; margin-top: 10px; }
+  #pausemenu { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 10; background: rgba(10,8,4,.82); color: #fff; text-align: center; }
+  #pausemenu h1 { color: #ffb03c; letter-spacing: 4px; }
+  #pausemenu button { pointer-events: auto; font-size: 17px; padding: 10px 30px; margin: 6px; border-radius: 8px; border: 1px solid #ffb03c; background: #3a2405; color: #ffe9a8; cursor: pointer; }
+  #pausemenu label { display: block; margin: 8px; font-size: 14px; }
+  #pausemenu select, #pausemenu input { pointer-events: auto; }
+  #bigmsg { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 11; color: #fff; text-align: center; background: rgba(0,0,0,.55); }
+  #bigmsg h1 { font-size: 72px; margin: 0; letter-spacing: 8px; }
+  #bigmsg p { font-size: 18px; }
   #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 </style>
 </head>
 <body>
-<canvas id="game" aria-label="Block Dodger: move the paddle left and right to dodge falling blocks and catch coins"></canvas>
+<canvas id="game" aria-label="Solstice City: desert open-world crime game"></canvas>
+<div id="hud">
+  <div id="topleft">
+    <div id="healthwrap"><div id="healthbar"></div></div>
+    <div id="cashline">$0</div>
+    <div id="respectline">Respect 0</div>
+    <div id="stars"></div>
+    <div id="clockline" class="panel">Day 1 — 12:00</div>
+    <div id="districtline" class="panel">Mirror Flats · Standing 0</div>
+  </div>
+  <div id="objective">
+    <div id="objtitle"></div>
+    <div id="objtext"></div>
+    <div id="mirastatus"></div>
+  </div>
+  <div id="minimapwrap">
+    <canvas id="minimap" width="190" height="190"></canvas>
+    <div id="standingpanel" class="panel"></div>
+  </div>
+  <div id="bottomright">
+    <div id="speedo" style="display:none"><span id="speedval">0</span> <span id="speedunit">km/h</span></div>
+    <div id="weaponname">Fists</div>
+    <div id="ammo"></div>
+  </div>
+  <div id="interact" class="panel">Press E</div>
+  <div id="crosshair"></div>
+  <div id="wheel"></div>
+  <div id="toast"></div>
+</div>
+<div id="screen"></div>
+<div id="pausemenu"></div>
+<div id="bigmsg"></div>
 <p id="status" role="status" aria-live="polite"></p>
+<script src="./vendor/three.min.js"></script>
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>

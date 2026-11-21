@@ -1,141 +1,131 @@
-// Drawing only: the world's state and the current screen in, pixels out. The 1280x720 playfield
-// is scaled to fit the window and centred, the margin filled with the backdrop colour. Flat
-// rectangles and circles, canvas text for the HUD and the panels. Text that holds a number is
-// rebuilt only when the number changes, so a frame allocates nothing.
-import { FIELD, FONT, LIVES, PALETTE } from './config.js';
-import { KIND_COIN } from './world.js';
+// Renderer: Three.js scene, sky + sun + lights, third-person camera, day
+// cycle (noon -> amber dusk), objective beacon, headlight glow at dusk.
+// Camera motion is driven by sim state only — no wall-clock input.
+const THREE = window.THREE;
 
-export const SCREEN_TITLE = 'title';
-export const SCREEN_PLAY = 'play';
-export const SCREEN_PAUSED = 'paused';
-export const SCREEN_OVER = 'over';
-
-/** The panel's width; its height grows with its lines: room for the title, the lines and the prompt. */
-const PANEL = { width: 600, top: 134, line: 34, bottom: 70 };
-const LIFE_SIZE = 20;
-const LIFE_GAP = 8;
-
-function cachedLabel(prefix) {
-  let value = -1;
-  let text = '';
-  return function label(next) {
-    if (next !== value) {
-      value = next;
-      text = prefix + next;
-    }
-    return text;
-  };
-}
-
-export function createRenderer(canvas) {
-  const context = canvas.getContext('2d');
-  const view = { scale: 1, x: 0, y: 0 };
-  const scoreLabel = cachedLabel('Score ');
-  const levelLabel = cachedLabel('Level ');
-  const finalLabel = cachedLabel('Score ');
-  const bestLabel = cachedLabel('Best ');
-
-  function resize() {
-    const ratio = window.devicePixelRatio || 1;
-    const width = Math.round(window.innerWidth * ratio);
-    const height = Math.round(window.innerHeight * ratio);
-    canvas.width = width;
-    canvas.height = height;
-    view.scale = Math.min(width / FIELD.width, height / FIELD.height);
-    view.x = (width - FIELD.width * view.scale) / 2;
-    view.y = (height - FIELD.height * view.scale) / 2;
+export class Renderer {
+  constructor(canvas) {
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0x87b8e8);
+    this.scene.fog = new THREE.Fog(0xd8b06a, 180, 520);
+    this.camera = new THREE.PerspectiveCamera(62, 1, 0.1, 1200);
+    this.sun = new THREE.DirectionalLight(0xfff2d8, 1.35);
+    this.sun.castShadow = true;
+    this.sun.shadow.mapSize.set(2048, 2048);
+    this.sun.shadow.camera.left = -90; this.sun.shadow.camera.right = 90;
+    this.sun.shadow.camera.top = 90; this.sun.shadow.camera.bottom = -90;
+    this.sun.shadow.camera.far = 400;
+    this.scene.add(this.sun);
+    this.ambient = new THREE.AmbientLight(0xffe8c8, 0.55);
+    this.scene.add(this.ambient);
+    // Sky dome: big gradient sphere (backside) + sun disc + a few clouds are
+    // city props; the dome colour shifts with the time of day.
+    const skyGeo = new THREE.SphereGeometry(800, 16, 12);
+    this.skyMat = new THREE.MeshBasicMaterial({
+      color: 0x87b8e8, side: THREE.BackSide, fog: false,
+    });
+    this.sky = new THREE.Mesh(skyGeo, this.skyMat);
+    this.scene.add(this.sky);
+    this.sunDisc = new THREE.Mesh(new THREE.SphereGeometry(18, 16, 12),
+      new THREE.MeshBasicMaterial({ color: 0xfff2b0, fog: false }));
+    this.scene.add(this.sunDisc);
+    // Objective beacon: a tall glowing column + ring at the target.
+    const beaconMat = new THREE.MeshBasicMaterial({ color: 0xffc83c, transparent: true, opacity: 0.45 });
+    this.beacon = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 60, 12, 1, true), beaconMat);
+    this.beacon.visible = false;
+    this.scene.add(this.beacon);
+    this.beaconRing = new THREE.Mesh(new THREE.TorusGeometry(3, 0.35, 8, 24),
+      new THREE.MeshBasicMaterial({ color: 0xffc83c }));
+    this.beaconRing.rotation.x = Math.PI / 2;
+    this.beaconRing.visible = false;
+    this.scene.add(this.beaconRing);
+    this._resize();
+    window.addEventListener('resize', () => this._resize());
   }
 
-  const fonts = new Map();
-  function text(value, x, y, size, color, align) {
-    if (!fonts.has(size)) fonts.set(size, `${size}px ${FONT}`);
-    context.font = fonts.get(size);
-    context.fillStyle = color;
-    context.textAlign = align;
-    context.fillText(value, x, y);
+  _resize() {
+    const w = window.innerWidth, h = window.innerHeight;
+    this.renderer.setSize(w, h, false);
+    this.camera.aspect = w / h;
+    this.camera.updateProjectionMatrix();
   }
 
-  function drawField(state) {
-    context.fillStyle = PALETTE.sky;
-    context.fillRect(0, 0, FIELD.width, FIELD.height);
-    context.fillStyle = PALETTE.ground;
-    context.fillRect(0, FIELD.groundY, FIELD.width, FIELD.height - FIELD.groundY);
+  setQuality(q) {
+    this.renderer.shadowMap.enabled = q === 'high';
+    this.renderer.setPixelRatio(q === 'high' ? Math.min(window.devicePixelRatio || 1, 2) : 1);
+  }
 
-    const items = state.items;
-    for (let index = 0; index < items.length; index += 1) {
-      const item = items[index];
-      if (!item.active) continue;
-      if (item.kind === KIND_COIN) {
-        context.fillStyle = PALETTE.coin;
-        context.beginPath();
-        context.arc(item.x + item.width / 2, item.y + item.height / 2, item.width / 2, 0, Math.PI * 2);
-        context.fill();
-      } else {
-        context.fillStyle = PALETTE.block;
-        context.fillRect(item.x, item.y, item.width, item.height);
-      }
-    }
+  // Time of day: clockMin 720 = noon, 1050 = dusk (17:30). Returns a 0..1 dusk factor.
+  duskFactor(clockMin) {
+    return Math.max(0, Math.min(1, (clockMin - 960) / 90));
+  }
 
-    const player = state.player;
-    // Blink while invulnerable after a hit: hidden on every other tenth of a second.
-    if (player.invulnerable === 0 || Math.floor(player.invulnerable * 10) % 2 === 1) {
-      context.fillStyle = PALETTE.player;
-      context.fillRect(player.x, player.y, player.width, player.height);
+  update(dt, g) {
+    const dusk = this.duskFactor(g.clockMin);
+    // Sun swings west and lowers; light warms to amber at dusk.
+    const sunAngle = Math.PI * (0.5 + (g.clockMin - 720) / 720);
+    const sunH = Math.max(0.12, Math.sin(sunAngle));
+    this.sun.position.set(Math.cos(sunAngle) * 180, sunH * 220, -80);
+    this.sun.target.position.set(0, 0, 0);
+    this.sun.target.updateMatrixWorld();
+    const dayCol = new THREE.Color(0xfff2d8);
+    const duskCol = new THREE.Color(0xff9a4a);
+    this.sun.color.copy(dayCol).lerp(duskCol, dusk);
+    this.sun.intensity = 1.35 - dusk * 0.45;
+    this.ambient.intensity = 0.55 - dusk * 0.18;
+    this.skyMat.color.setHex(0x87b8e8).lerp(new THREE.Color(0xe88a4a), dusk);
+    this.scene.fog.color.setHex(0xd8b06a).lerp(new THREE.Color(0xc07840), dusk);
+    this.sunDisc.position.set(Math.cos(sunAngle) * 700, sunH * 700, -300);
+    this.sunDisc.material.color.setHex(0xfff2b0).lerp(new THREE.Color(0xff7a2a), dusk);
+    // Follow the player with the shadow camera.
+    this.sun.position.x += g.player.x; this.sun.position.z += g.player.z;
+    this.sun.target.position.set(g.player.x, 0, g.player.z);
+    // Beacon at the objective.
+    const obj = g.missions.objective();
+    if (obj.x !== undefined && obj.x !== null) {
+      const y = obj.y || 0;
+      this.beacon.visible = true;
+      this.beaconRing.visible = true;
+      this.beacon.position.set(obj.x, y + 30, obj.z);
+      this.beaconRing.position.set(obj.x, y + 0.4 + Math.sin(g.simTime * 2) * 0.3, obj.z);
+      const s = 1 + Math.sin(g.simTime * 3) * 0.12;
+      this.beaconRing.scale.set(s, s, 1);
+    } else {
+      this.beacon.visible = false;
+      this.beaconRing.visible = false;
     }
   }
 
-  function drawHud(state) {
-    context.textBaseline = 'top';
-    text(scoreLabel(state.score), 24, 20, 28, PALETTE.text, 'left');
-    text(levelLabel(state.level), FIELD.width / 2, 20, 28, PALETTE.text, 'center');
-    const firstLife = FIELD.width - 24 - LIVES * (LIFE_SIZE + LIFE_GAP) + LIFE_GAP;
-    text('Lives', firstLife - 12, 20, 28, PALETTE.text, 'right');
-    for (let life = 0; life < LIVES; life += 1) {
-      context.fillStyle = life < state.lives ? PALETTE.player : PALETTE.ground;
-      context.fillRect(firstLife + life * (LIFE_SIZE + LIFE_GAP), 24, LIFE_SIZE, LIFE_SIZE);
-    }
-  }
-
-  function drawPanel(title, lines, prompt) {
-    const height = PANEL.top + lines.length * PANEL.line + PANEL.bottom;
-    const x = (FIELD.width - PANEL.width) / 2;
-    const y = (FIELD.height - height) / 2;
-    context.fillStyle = PALETTE.panel;
-    context.fillRect(x, y, PANEL.width, height);
-    context.textBaseline = 'alphabetic';
-    text(title, FIELD.width / 2, y + 78, 48, PALETTE.text, 'center');
-    for (let index = 0; index < lines.length; index += 1) {
-      text(lines[index], FIELD.width / 2, y + PANEL.top + index * PANEL.line, 22, PALETTE.muted, 'center');
-    }
-    text(prompt, FIELD.width / 2, y + height - 40, 24, PALETTE.coin, 'center');
-  }
-
-  const TITLE_LINES = ['Dodge the red blocks. Catch the gold coins.', 'Move with ← → or A D.  Pause with P.', ''];
-  const PAUSED_LINES = ['The blocks will wait for you.'];
-  const OVER_LINES = ['', ''];
-
-  /** Paint one frame: the field, then the HUD or a panel for the screen the game is on. */
-  function draw(state, screen, best) {
-    context.setTransform(1, 0, 0, 1, 0, 0);
-    context.fillStyle = PALETTE.backdrop;
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.setTransform(view.scale, 0, 0, view.scale, view.x, view.y);
-    drawField(state);
-    if (screen === SCREEN_TITLE) {
-      TITLE_LINES[2] = bestLabel(best);
-      drawPanel('Block Dodger', TITLE_LINES, 'Press Space or click to start');
+  // Third-person camera: behind the player (or car), mouse orbit, collision-free
+  // by pulling in when a building is between camera and player (cheap: clamp).
+  // A shot mode may pin the camera with g.shotCam {pos, look}.
+  updateCamera(g) {
+    if (g.shotCam) {
+      this.camera.position.set(g.shotCam.pos[0], g.shotCam.pos[1], g.shotCam.pos[2]);
+      this.camera.lookAt(g.shotCam.look[0], g.shotCam.look[1], g.shotCam.look[2]);
+      this.sky.position.set(this.camera.position.x, 0, this.camera.position.z);
       return;
     }
-    drawHud(state);
-    if (screen === SCREEN_PAUSED) drawPanel('Paused', PAUSED_LINES, 'Press P to resume');
-    else if (screen === SCREEN_OVER) {
-      OVER_LINES[0] = finalLabel(state.score);
-      OVER_LINES[1] = bestLabel(best);
-      drawPanel('Game over', OVER_LINES, 'Press Space or click to play again');
-    }
+    const p = g.player;
+    const yaw = g.camYaw, pitch = g.camPitch;
+    const inCar = !!g.playerCar;
+    const dist = inCar ? 13 : 8.5;
+    const height = inCar ? 4.5 : 3.2;
+    const tx = p.x, tz = p.z, ty = (p.onRoof ? 14 : 0) + 1.6;
+    const cx = tx - Math.cos(yaw) * Math.cos(pitch) * dist;
+    const cz = tz + Math.sin(yaw) * Math.cos(pitch) * dist;
+    const cy = ty + Math.sin(pitch) * dist + height * 0.4;
+    this.camera.position.set(cx, Math.max(cy, 1.2), cz);
+    this.camera.lookAt(tx, ty, tz);
+    this.sky.position.set(this.camera.position.x, 0, this.camera.position.z);
+    this.sunDisc.position.y = Math.max(this.sunDisc.position.y, 40);
   }
 
-  resize();
-  window.addEventListener('resize', resize);
-  return { draw };
+  render() {
+    this.renderer.render(this.scene, this.camera);
+  }
 }
