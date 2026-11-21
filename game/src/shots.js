@@ -30,13 +30,13 @@ export function stageShot(g, mode) {
   if (mode === 'cover') {
     // Police chase on the open z=0 avenue: wanted 4 (helicopter + roadblocks),
     // job 5 objective, pickup large and central, no building in the sightline.
-    seatInPickup(g, -120, 0, 0); // heading +x along the avenue
+    seatInPickup(g, -100, 0, 0); // heading +x along the avenue
     g.missions.startJob(4);
     g.setWanted(4);
     g.clockMin = 780;
     for (let i = 0; i < 300; i++) g.step(STEP);
     // Helicopter hover spot, framed in the same shot as the car (ahead-left).
-    if (g.police.heli) g.police.heli.mesh.position.set(-98, 17, -20);
+    if (g.police.heli) g.police.heli.mesh.position.set(-82, 13, -14);
     // A traffic car can brake to a stop right behind the player and block the
     // camera — shove any car near the player 45 m ahead along its own lane.
     for (const t of g.traffic.cars) {
@@ -46,8 +46,24 @@ export function stageShot(g, mode) {
         t.mesh.position.set(t.x, 0, t.z);
       }
     }
-    g.city.hidePalmsNear(-128, 7, 20);
-    setShotCam(g, -128.5, 3.0, 7.5, -110, 1.6, -1);
+    // A police car can ram right up to the lens and crowd the frame — push
+    // any car that closed to within 8 m back out to ~16 m, still visibly
+    // chasing but no longer swallowing the hero car.
+    for (const c of g.police.cars) {
+      const d = Math.hypot(c.x - g.player.x, c.z - g.player.z);
+      if (d < 8 && d > 0.01) {
+        const s = 16 / d;
+        c.x = g.player.x + (c.x - g.player.x) * s;
+        c.z = g.player.z + (c.z - g.player.z) * s;
+        c.mesh.position.set(c.x, 0, c.z);
+      }
+    }
+    g.city.hidePalmsNear(-108, 7, 20);
+    // Camera close behind-right of the pickup, looking just past it, so the
+    // car sits large and near-centre (it was bottom-left and small before).
+    // Staging sits 20 m east of the old spot to keep the car out of the
+    // tall building's shadow.
+    setShotCam(g, -109, 2.6, 4.0, -88, 1.2, -3);
   } else if (mode === 'onfoot') {
     // Dana centred in her orange jacket, facing the camera, storefronts +
     // pedestrians behind her, crosshair off (fists selected, not aiming).
@@ -57,8 +73,9 @@ export function stageShot(g, mode) {
     g.weapons.select(0);
     g.aiming = false;
     g.clockMin = 780;
-    // Stage a few pedestrians on the plaza around her.
-    const spots = [[24, 40], [36, 42], [22, 50], [38, 50], [30, 36]];
+    // Stage a few pedestrians on the plaza around her (behind/side of her,
+    // never between her and the camera, so none blocks the shot).
+    const spots = [[24, 40], [38, 40], [22, 44], [40, 44], [30, 36]];
     g.pedestrians.peds.slice(0, 5).forEach((p, i) => {
       p.x = spots[i][0]; p.z = spots[i][1];
       p.target = { x: spots[i][0] + 4, z: spots[i][1] + 2 };
@@ -66,7 +83,9 @@ export function stageShot(g, mode) {
     });
     for (let i = 0; i < 120; i++) g.step(STEP);
     g.city.hidePalmsNear(30, 54, 18);
-    setShotCam(g, 34, 2.2, 52, 29.5, 1.4, 45.5);
+    // Camera closer and more level than before, so Dana fills the frame and
+    // the empty plaza foreground shrinks.
+    setShotCam(g, 32, 1.8, 50.5, 30, 1.5, 46);
   } else if (mode === 'driving') {
     // Player pickup large and near, Helios Tower detailed beside it, beacon
     // and antenna in frame (camera tilted up toward the tower).
