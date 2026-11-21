@@ -884,6 +884,8 @@ export class World {
       press: (code, down) => this.input.inject(code, down),
       holdFire: (down) => { this.input.fireHeld = down; this.input.aimHeld = down; },
       startJob: (i) => this.missions.startJob(i),
+      // Test-only: jump to a stage inside the active job.
+      setStage: (i) => { this.missions.stageIndex = i; this.missions._enterStage(); },
       setWanted: (n) => this.setWanted(n),
       giveCash: (n) => { this.cash += n; },
       setHealth: (n) => { this.player.health = n; },

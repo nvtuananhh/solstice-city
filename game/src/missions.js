@@ -263,9 +263,14 @@ export class Missions {
         }
         return false;
       case 'descend':
-        if (p.onRoof && dist(s.x, s.z) < (s.r || 5) && g.input.wasPressed('KeyE')) {
-          g.putPlayerOnGround();
-          return true;
+        if (dist(s.x, s.z) < (s.r || 5)) {
+          if (p.onRoof && g.input.wasPressed('KeyE')) {
+            g.putPlayerOnGround();
+            return true;
+          }
+          // Already on the ground (fell off the roof during the fight):
+          // the descent is done, no need to climb back up for a key press.
+          if (!p.onRoof) return true;
         }
         return false;
       case 'escape': {
