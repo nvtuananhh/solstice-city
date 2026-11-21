@@ -27,6 +27,7 @@ export class City {
     this.beaconMat = null;
     this.beaconLight = null;
     this.streetLights = [];
+    this.palms = [];     // palm groups, for shot staging to clear sightlines
     this.shardMeshes = [];
     this.dustDevils = [];
     this.clouds = [];
@@ -185,37 +186,42 @@ export class City {
     plaza.position.y = 1; g.add(plaza);
     const podium = new THREE.Mesh(new THREE.CylinderGeometry(14, 18, 8, 8), concrete);
     podium.position.y = 6; g.add(podium);
-    // shaft in three tapering tiers
-    const tiers = [[9, 12, 34, 12], [7, 9, 30, 46], [5, 7, 22, 76]];
+    // shaft in three tapering tiers (total height ~52 m, beacon at ~61 m)
+    const tiers = [[9, 12, 20, 14], [7, 9, 16, 32], [5, 7, 12, 46]];
     for (const [rTop, rBot, h, y] of tiers) {
       const shaft = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBot, h, 12), panel);
       shaft.position.y = y; shaft.castShadow = true; g.add(shaft);
       // panel seams: thin dark rings + vertical strips
-      for (let s = 0; s < 3; s++) {
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(rBot - (s * (rBot - rTop)) / 3, 0.18, 6, 24), seam);
+      for (let s = 0; s < 4; s++) {
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(rBot - (s * (rBot - rTop)) / 4, 0.18, 6, 24), seam);
         ring.rotation.x = Math.PI / 2;
-        ring.position.y = y - h / 2 + (s + 1) * (h / 4);
+        ring.position.y = y - h / 2 + (s + 1) * (h / 5);
         g.add(ring);
       }
       for (let v = 0; v < 8; v++) {
         const a = (v / 8) * Math.PI * 2;
-        const strip = new THREE.Mesh(new THREE.BoxGeometry(0.25, h, 0.25), seam);
+        const strip = new THREE.Mesh(new THREE.BoxGeometry(0.35, h, 0.35), seam);
         const rr = (rTop + rBot) / 2;
         strip.position.set(Math.cos(a) * rr, y, Math.sin(a) * rr);
         strip.rotation.y = -a;
         g.add(strip);
       }
+      // gold band at the tier junction
+      const band = new THREE.Mesh(new THREE.TorusGeometry(rBot + 0.15, 0.35, 8, 24), gold);
+      band.rotation.x = Math.PI / 2;
+      band.position.y = y - h / 2 + 0.4;
+      g.add(band);
     }
     // gold crown ring + beacon mast + antenna
     const crown = new THREE.Mesh(new THREE.TorusGeometry(5.4, 0.7, 8, 24), gold);
-    crown.rotation.x = Math.PI / 2; crown.position.y = 88; g.add(crown);
-    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.9, 10, 8), seam);
-    mast.position.y = 93; g.add(mast);
+    crown.rotation.x = Math.PI / 2; crown.position.y = 53; g.add(crown);
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.9, 8, 8), seam);
+    mast.position.y = 57; g.add(mast);
     this.beaconMat = new THREE.MeshBasicMaterial({ color: 0xff3020 });
     const beacon = new THREE.Mesh(new THREE.SphereGeometry(1.4, 12, 10), this.beaconMat);
-    beacon.position.y = 99; g.add(beacon);
-    const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 8, 6), seam);
-    antenna.position.y = 104; g.add(antenna);
+    beacon.position.y = 61; g.add(beacon);
+    const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 7, 6), seam);
+    antenna.position.y = 65; g.add(antenna);
     // base structure: entrance block + solar wings
     const entry = new THREE.Mesh(new THREE.BoxGeometry(16, 6, 8), concrete);
     entry.position.set(0, 5, 16); g.add(entry);
@@ -225,7 +231,7 @@ export class City {
       wing.position.set(sx * 20, 3, 0); wing.rotation.z = sx * 0.18; g.add(wing);
     }
     this.beaconLight = new THREE.PointLight(0xff4030, 1.2, 60);
-    this.beaconLight.position.y = 99;
+    this.beaconLight.position.y = 61;
     g.add(this.beaconLight);
     this.scene.add(g);
     this.colliders.push({ x0: T.x - 14, z0: T.z - 14, x1: T.x + 14, z1: T.z + 14, h: 100 });
@@ -352,6 +358,7 @@ export class City {
         }
         g.position.set(x, 0, z);
         this.scene.add(g);
+        this.palms.push({ group: g, x, z });
         this.colliders.push({ x0: x - 0.6, z0: z - 0.6, x1: x + 0.6, z1: z + 0.6, h: 7 });
       } else {
         const c = new THREE.Mesh(new THREE.CapsuleGeometry(0.8, 3, 4, 8), cactusMat);
@@ -406,6 +413,13 @@ export class City {
       m.position.set(x, 1.4, z);
       this.scene.add(m);
       this.shardMeshes.push({ mesh: m, x, z, taken: false });
+    }
+  }
+
+  // Hide palms near a point (shot staging: keep the camera sightline clear).
+  hidePalmsNear(x, z, r) {
+    for (const p of this.palms) {
+      if (Math.hypot(p.x - x, p.z - z) < r) p.group.visible = false;
     }
   }
 

@@ -61,7 +61,7 @@ export const JOBS = [
       { type: 'climb', x: L.rooftop.x, z: L.rooftop.z + 14, r: 5, label: 'Climb to the rooftop (E)' },
       { type: 'combat', roof: true, spawn: [[22, -38], [38, -22], [26, -24], [34, -36]], count: 4, label: 'Clear the rooftop' },
       { type: 'protect', x: L.rooftop.x, z: L.rooftop.z, r: 12, duration: 20, label: 'Protect the witness' },
-      { type: 'descend', x: L.rooftop.x, z: L.rooftop.z + 14, r: 5, label: 'Head back down (E)' },
+      { type: 'descend', x: L.rooftop.x, z: L.rooftop.z + 10, r: 5, label: 'Head back down (E)' },
     ],
   },
   {
@@ -122,7 +122,7 @@ export class Missions {
     this.raceStart = { x: -60, z: -60 };
   }
 
-  currentJob() { return this.activeJob ? JOBS[this.activeJob] : null; }
+  currentJob() { return (this.activeJob !== null && this.activeJob !== undefined) ? JOBS[this.activeJob] : null; }
   currentStage() {
     const job = this.currentJob();
     return job ? job.stages[this.stageIndex] : null;

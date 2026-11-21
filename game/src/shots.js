@@ -28,22 +28,32 @@ export function stageShot(g, mode) {
   g.respect = 42;
 
   if (mode === 'cover') {
-    // Police chase: wanted 4 (helicopter + roadblocks), job 5 objective,
-    // pickup large and central on the z=60 avenue, traffic around.
-    seatInPickup(g, 0, 60, 0); // heading +x along the avenue
+    // Police chase on the open z=0 avenue: wanted 4 (helicopter + roadblocks),
+    // job 5 objective, pickup large and central, no building in the sightline.
+    seatInPickup(g, -120, 0, 0); // heading +x along the avenue
     g.missions.startJob(4);
     g.setWanted(4);
     g.clockMin = 780;
     for (let i = 0; i < 300; i++) g.step(STEP);
-    // Helicopter hover spot, framed in the same shot as the car.
-    if (g.police.heli) g.police.heli.mesh.position.set(24, 20, 44);
-    setShotCam(g, -11, 3.6, 68, 3, 1.4, 59);
+    // Helicopter hover spot, framed in the same shot as the car (ahead-left).
+    if (g.police.heli) g.police.heli.mesh.position.set(-98, 17, -20);
+    // A traffic car can brake to a stop right behind the player and block the
+    // camera — shove any car near the player 45 m ahead along its own lane.
+    for (const t of g.traffic.cars) {
+      if (Math.hypot(t.x - g.player.x, t.z - g.player.z) < 15) {
+        t.x += Math.cos(t.heading) * 45;
+        t.z += -Math.sin(t.heading) * 45;
+        t.mesh.position.set(t.x, 0, t.z);
+      }
+    }
+    g.city.hidePalmsNear(-128, 7, 20);
+    setShotCam(g, -128.5, 3.0, 7.5, -110, 1.6, -1);
   } else if (mode === 'onfoot') {
-    // Dana centred in her orange jacket, storefronts + pedestrians behind her,
-    // crosshair off (fists selected, not aiming).
+    // Dana centred in her orange jacket, facing the camera, storefronts +
+    // pedestrians behind her, crosshair off (fists selected, not aiming).
     g.missions.startJob(0);
     g.player.x = 30; g.player.z = 46; g.player.y = 0;
-    g.player.heading = Math.PI / 2; // facing north, toward the camera
+    g.player.heading = -Math.PI / 2; // facing south, toward the camera
     g.weapons.select(0);
     g.aiming = false;
     g.clockMin = 780;
@@ -55,16 +65,20 @@ export function stageShot(g, mode) {
       p.mesh.position.set(p.x, 0, p.z);
     });
     for (let i = 0; i < 120; i++) g.step(STEP);
-    setShotCam(g, 30, 3.0, 58.5, 30, 1.6, 44);
+    g.city.hidePalmsNear(30, 54, 18);
+    setShotCam(g, 34, 2.2, 52, 29.5, 1.4, 45.5);
   } else if (mode === 'driving') {
-    // Player pickup large and near, Helios Tower detailed beside it.
+    // Player pickup large and near, Helios Tower detailed beside it, beacon
+    // and antenna in frame (camera tilted up toward the tower).
     seatInPickup(g, 0, -96, Math.PI / 2 - 0.3); // heading -z, slightly toward the tower
     g.clockMin = 780;
     g.setWanted(0);
     for (let i = 0; i < 180; i++) g.step(STEP);
-    setShotCam(g, -1.5, 3.4, -87.5, 8, 2.2, -118);
+    g.city.hidePalmsNear(0, -88, 16);
+    setShotCam(g, -2, 3.0, -85, 12, 12, -128);
   } else if (mode === 'mission') {
     // Job 6 "The Witness": Dana actually on the rooftop, roof combat live.
+    // Camera from the west so Dana is central and no enemy blocks her.
     g.missions.startJob(5);
     g.missions.stageIndex = 2;
     g.missions._enterStage();
@@ -75,7 +89,7 @@ export function stageShot(g, mode) {
     g.missions._spawnWitness(26, -34);
     g.clockMin = 900; // late afternoon light on the roof
     for (let i = 0; i < 180; i++) g.step(STEP);
-    setShotCam(g, 44, 21, -16, 29, 14.5, -30);
+    setShotCam(g, 18, 19, -14, 30, 14.5, -30);
   } else {
     // Unknown mode: plain plaza view.
     for (let i = 0; i < 60; i++) g.step(STEP);

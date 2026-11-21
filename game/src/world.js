@@ -255,7 +255,7 @@ export class World {
       this._updateVisuals(dt);
       this.audio.update(dt, this.playerCar ? Math.abs(this.playerCar.speed) * 3.6 : 0,
         this.wanted, this.radioOn, this.station);
-      this.hud.update(dt, this);
+      if (this.hudEnabled !== false) this.hud.update(dt, this);
     }
     this.renderer.update(dt, this);
     this.renderer.updateCamera(this);
@@ -486,11 +486,6 @@ export class World {
   _updateInteractions(dt) {
     const inp = this.input;
     const p = this.player;
-    // Exit car.
-    if (this.playerCar && inp.wasPressed('KeyE')) {
-      this._exitCar();
-      return;
-    }
     // Mission interact stages consume E themselves; don't double-handle.
     const stage = this.missions.currentStage();
     if (stage && ['talk', 'climb', 'descend'].includes(stage.type)) {
@@ -501,7 +496,7 @@ export class World {
       }
     }
     if (this.playerCar) {
-      // In a car: taxi pickup, race checkpoints are automatic.
+      // In a car: taxi pickup takes priority over exiting the car.
       const cust = this._nearestTaxiCustomer(6);
       if (cust && !this.missions.taxi) {
         this.hud.showInteract('Press E — pick up fare');
@@ -510,6 +505,10 @@ export class World {
           this.pedestrians.clearCustomer(cust);
           this._taxiDest = dest;
         }
+        return;
+      }
+      if (inp.wasPressed('KeyE')) {
+        this._exitCar();
         return;
       }
       this.hud.hideInteract();
@@ -835,6 +834,7 @@ export class World {
       state: () => ({
         screen: this.screen,
         x: this.player.x, z: this.player.z, y: this.player.y,
+        heading: this.player.heading,
         health: this.player.health,
         cash: this.cash, respect: this.respect, wanted: this.wanted,
         jobIndex: this.missions.jobIndex, jobDone: this.missions.jobDone,
@@ -843,7 +843,9 @@ export class World {
         inCar: !!this.playerCar,
         carType: this.playerCar ? this.playerCar.type : null,
         carHealth: this.playerCar ? this.playerCar.health : null,
+        carSpeed: this.playerCar ? this.playerCar.speed : 0,
         enemies: this.combat.enemies.length,
+        enemyPos: this.combat.enemies.map((e) => [e.x, e.z, e.health]),
         policeCars: this.police.cars.length,
         heli: !!this.police.heli,
         roadblocks: this.police.roadblocks.length,
@@ -853,11 +855,17 @@ export class World {
         simTime: this.simTime,
         onRoof: this.player.onRoof,
         taxi: !!this.missions.taxi,
+        taxiDest: this.missions.taxi ? this.missions.taxi.dest : null,
+        taxiCustomers: this.pedestrians.peds.filter((p) => p.taxi).map((p) => [p.x, p.z]),
         race: !!this.missions.race,
+        raceCp: this.missions.race ? this.missions.race.def.checkpoints[this.missions.race.cp] : null,
+        raceIdx: this.missions.race ? this.missions.race.cp : 0,
         robbery: !!this.missions.robbery,
         weapons: this.weapons.slots.map((s) => ({ key: s.key, owned: s.owned, ammo: s.ammoLeft })),
         currentWeapon: this.weapons.currentWeapon().key,
+        wheelOpen: this.weapons.wheelOpen,
         standing: this.standing.levels.slice(),
+        parkedCars: this.parkedCars.filter((c) => !c.wrecked).map((c) => [c.x, c.z, c.type]),
       }),
       warp: (x, z) => {
         this.player.x = x; this.player.z = z;
@@ -876,6 +884,14 @@ export class World {
       setHealth: (n) => { this.player.health = n; },
       giveWeapon: (k, a) => this.giveWeapon(k, a),
       giveUpgrade: (k) => { this.upgrades[k] = (this.upgrades[k] || 0) + 1; },
+      setCarHealth: (n) => { if (this.playerCar) this.playerCar.health = n; },
+      bringPickup: () => {
+        const c = this.ownPickup;
+        c.x = this.player.x + 4; c.z = this.player.z + 2;
+        c.mesh.position.set(c.x, 0, c.z);
+        c.wrecked = false; c.health = 100;
+        return true;
+      },
       step: (n) => { for (let i = 0; i < n; i++) this.step(STEP); },
       enterNearestCar: () => {
         const c = this._nearestEnterableCar(6);
@@ -885,6 +901,7 @@ export class World {
       exitCar: () => this._exitCar(),
       openGarage: () => this._openGarage(),
       buyUpgrade: (k) => this._buyUpgrade(k, this.standing.garageFactor(districtAt(this.player.x, this.player.z))),
+      setHud: (on) => { this.hudEnabled = on; },
       setScreen: (s) => { this.screen = s; },
       startGame: () => this._newGame(),
       save: () => this.save(),
