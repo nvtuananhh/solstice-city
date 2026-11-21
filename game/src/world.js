@@ -226,14 +226,18 @@ export class World {
     this.simTime += dt;
     this.clockMin += dt * 0.5; // 1 game minute per 2 real seconds
     if (this.clockMin >= 1440) { this.clockMin -= 1440; this.day++; }
-    // Big-message and pause screens take Enter / Escape.
+    // Big-message and pause screens take Enter / Escape. Consume the edge
+    // here so the play block below does not see the same press again
+    // (it would re-open the pause menu / start a job in the same step).
     if (this.screen === 'big' && this.input.wasPressed('Enter')) {
       this.hud.hideBig();
       this.screen = 'play';
+      this.input.pressed['Enter'] = false;
     }
     if (this.screen === 'pause' && this.input.wasPressed('Escape')) {
       this.hud.hidePause();
       this.screen = 'play';
+      this.input.pressed['Escape'] = false;
     }
     if (this.screen === 'title') this.camYaw += dt * 0.05; // slow title orbit
     if (this.screen === 'play') {
@@ -514,17 +518,13 @@ export class World {
       this.hud.hideInteract();
       return;
     }
-    // On foot: find the nearest interactable.
+    // On foot: find the nearest interactable, in priority order.
+    // (The taxi-customer hint is lowest priority and never blocks the rest.)
     const car = this._nearestEnterableCar(4.5);
     if (car) {
       const label = car.driver === 'traffic' ? 'Press E — jack the car' : (car === this.ownPickup ? 'Press E — get in your pickup' : 'Press E — get in the car');
       this.hud.showInteract(label);
       if (inp.wasPressed('KeyE')) this._enterCar(car);
-      return;
-    }
-    const cust = this._nearestTaxiCustomer(4);
-    if (cust && !this.missions.taxi) {
-      this.hud.showInteract('Taxi customer — get in a car first');
       return;
     }
     if (Math.hypot(p.x - LANDMARKS.garage.x, p.z - LANDMARKS.garage.z) < 12) {
@@ -548,6 +548,11 @@ export class World {
         this.missions.startRace(this.raceIdx);
         this.raceIdx = (this.raceIdx + 1) % RACES.length;
       }
+      return;
+    }
+    const cust = this._nearestTaxiCustomer(4);
+    if (cust && !this.missions.taxi) {
+      this.hud.showInteract('Taxi customer — get in a car first');
       return;
     }
     this.hud.hideInteract();
